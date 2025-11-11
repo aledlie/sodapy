@@ -474,24 +474,40 @@ def test_replace_non_data_file():
     client.close()
 
 
-def setup_publish_mock(
+def _setup_mock_base(
     adapter,
     method,
     response,
     response_code,
+    uri,
     reason="OK",
-    dataset_identifier=FAKE_DATASET_IDENTIFIER,
-    content_type="json",
+    headers=None,
+    load_json_safely=False,
 ):
+    """Base function for setting up mock API responses.
+
+    Args:
+        adapter: The mock adapter to register URI with
+        method: HTTP method (GET, POST, etc.)
+        response: Path to response file in TEST_DATA_PATH
+        response_code: HTTP status code
+        uri: Full URI to mock
+        reason: HTTP reason phrase
+        headers: Response headers dict (defaults to JSON content-type)
+        load_json_safely: If True, return None on JSON parse errors
+    """
     path = os.path.join(TEST_DATA_PATH, response)
     with open(path, "r") as response_body:
-        body = json.load(response_body)
+        if load_json_safely:
+            try:
+                body = json.load(response_body)
+            except ValueError:
+                body = None
+        else:
+            body = json.load(response_body)
 
-    uri = "{}{}{}/{}/publication.{}".format(
-        PREFIX, FAKE_DOMAIN, OLD_API_PATH, dataset_identifier, content_type
-    )
-
-    headers = {"content-type": "application/json; charset=utf-8"}
+    if headers is None:
+        headers = {"content-type": "application/json; charset=utf-8"}
 
     adapter.register_uri(
         method,
@@ -501,6 +517,22 @@ def setup_publish_mock(
         reason=reason,
         headers=headers,
     )
+
+
+def setup_publish_mock(
+    adapter,
+    method,
+    response,
+    response_code,
+    reason="OK",
+    dataset_identifier=FAKE_DATASET_IDENTIFIER,
+    content_type="json",
+):
+    """Setup mock for publication endpoint."""
+    uri = "{}{}{}/{}/publication.{}".format(
+        PREFIX, FAKE_DOMAIN, OLD_API_PATH, dataset_identifier, content_type
+    )
+    _setup_mock_base(adapter, method, response, response_code, uri, reason)
 
 
 def setup_import_non_data_file(
@@ -512,22 +544,9 @@ def setup_import_non_data_file(
     dataset_identifier=FAKE_DATASET_IDENTIFIER,
     content_type="json",
 ):
-    path = os.path.join(TEST_DATA_PATH, response)
-    with open(path, "r") as response_body:
-        body = json.load(response_body)
-
+    """Setup mock for import non-data file endpoint."""
     uri = "{}{}/api/imports2/?method=blob".format(PREFIX, FAKE_DOMAIN)
-
-    headers = {"content-type": "application/json; charset=utf-8"}
-
-    adapter.register_uri(
-        method,
-        uri,
-        status_code=response_code,
-        json=body,
-        reason=reason,
-        headers=headers,
-    )
+    _setup_mock_base(adapter, method, response, response_code, uri, reason)
 
 
 def setup_replace_non_data_file(
@@ -539,10 +558,7 @@ def setup_replace_non_data_file(
     dataset_identifier=FAKE_DATASET_IDENTIFIER,
     content_type="json",
 ):
-    path = os.path.join(TEST_DATA_PATH, response)
-    with open(path, "r") as response_body:
-        body = json.load(response_body)
-
+    """Setup mock for replace non-data file endpoint."""
     uri = "{}{}{}/{}.{}?method=replaceBlob&id={}".format(
         PREFIX,
         FAKE_DOMAIN,
@@ -551,17 +567,8 @@ def setup_replace_non_data_file(
         "txt",
         dataset_identifier,
     )
-
     headers = {"content-type": "text/plain; charset=utf-8"}
-
-    adapter.register_uri(
-        method,
-        uri,
-        status_code=response_code,
-        json=body,
-        reason=reason,
-        headers=headers,
-    )
+    _setup_mock_base(adapter, method, response, response_code, uri, reason, headers)
 
 
 def setup_old_api_mock(
@@ -573,25 +580,9 @@ def setup_old_api_mock(
     dataset_identifier=FAKE_DATASET_IDENTIFIER,
     content_type="json",
 ):
-    path = os.path.join(TEST_DATA_PATH, response)
-    with open(path, "r") as response_body:
-        try:
-            body = json.load(response_body)
-        except ValueError:
-            body = None
-
+    """Setup mock for old API endpoint."""
     uri = "{}{}{}/{}.{}".format(PREFIX, FAKE_DOMAIN, OLD_API_PATH, dataset_identifier, content_type)
-
-    headers = {"content-type": "application/json; charset=utf-8"}
-
-    adapter.register_uri(
-        method,
-        uri,
-        status_code=response_code,
-        json=body,
-        reason=reason,
-        headers=headers,
-    )
+    _setup_mock_base(adapter, method, response, response_code, uri, reason, load_json_safely=True)
 
 
 def setup_mock(
