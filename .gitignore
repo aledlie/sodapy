@@ -1,4 +1,6 @@
 *.py[cod]
+__pycache__/
+*.pyc
 MANIFEST
 
 # virtualenv
@@ -49,3 +51,6 @@ examples/.ipynb_checkpoints
 
 # VSCode
 !.vscode/settings.json
+
+# Repomix output files
+repomix-output.xml
